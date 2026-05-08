@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { transactionApi, paymentApi, storageApi } from '@/api/api';
+import { transactionApi, paymentApi, storageApi, earningCycleApi } from '@/api/api';
 import { toast } from 'sonner';
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Clock, CheckCircle, XCircle,
@@ -44,14 +44,24 @@ export default function UserWallet() {
 
   const fetchData = async () => {
     try {
-      const [txRes, depRes, withRes] = await Promise.all([
+      const [txRes, depRes, withRes, cycleRes] = await Promise.all([
         transactionApi.my(),
         paymentApi.active('deposit'),
         paymentApi.active('withdrawal'),
+        earningCycleApi.current(),   // lazy-completes expired cycle if needed
       ]);
       setTransactions(txRes.transactions || []);
       setDepositMethods(depRes.methods || []);
       setWithdrawMethods(withRes.methods || []);
+
+      // If an expired cycle was just completed, refresh user so balance is current
+      if (cycleRes.justCompleted) {
+        toast.success(
+          '🎉 Your 21-day earning cycle is complete! Your funds are now available for withdrawal.',
+          { duration: 8000 }
+        );
+        refreshUser();
+      }
     } catch (err: any) { toast.error(err.message); }
     finally { setLoading(false); }
   };
@@ -90,21 +100,28 @@ export default function UserWallet() {
   };
 
   const handleWithdraw = async () => {
-    if (user?.kyc_status !== 'verified') { toast.error('Complete KYC verification first'); return; }
-    if (!user?.withdrawal_enabled) { toast.error('Withdrawals are disabled for your account'); return; }
+    if (user?.kyc_status !== 'verified') { toast.error('Complete KYC verification first to enable withdrawals'); return; }
+    if (!user?.withdrawal_enabled) { toast.error('Withdrawals are currently disabled for your account'); return; }
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { toast.error('Enter a valid amount'); return; }
+    if (!amt || amt <= 0) { toast.error('Enter a valid withdrawal amount'); return; }
+    if (amt < 50) { toast.error('Minimum withdrawal amount is $50'); return; }
+    if (Number(user?.balance || 0) < amt) { toast.error(`Insufficient balance. Available: $${Number(user?.balance || 0).toFixed(2)}`); return; }
     if (!withdrawMethod) { toast.error('Select a payment method'); return; }
     if (!withdrawDetails) { toast.error('Enter your account details'); return; }
     setSubmitting(true);
     try {
-      await transactionApi.withdraw({ amount: amt, payment_method: withdrawMethod, details: withdrawDetails });
-      toast.success('Withdrawal request submitted!');
+      const res = await transactionApi.withdraw({ amount: amt, payment_method: withdrawMethod, details: withdrawDetails });
+      if (!res.success) {
+        toast.error(res.message || 'Withdrawal request failed');
+        return;
+      }
+      toast.success('Withdrawal request submitted! Pending admin approval.');
       setAmount(''); setWithdrawMethod(''); setWithdrawDetails('');
       fetchData(); refreshUser();
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) { toast.error(err.message || 'Withdrawal failed'); }
     finally { setSubmitting(false); }
   };
+
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F6FF2E]" /></div>;
 

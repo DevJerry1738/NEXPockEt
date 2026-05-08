@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/plans', icon: Zap, label: 'Investment Plans' },
   { to: '/tasks', icon: ListChecks, label: 'Tasks' },
   { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/kyc', icon: ShieldCheck, label: 'KYC' },
@@ -128,7 +127,13 @@ export default function UserLayout() {
               <p className="text-sm font-medium text-white">{user?.name}</p>
               <p className="text-xs text-gray-400">${(user?.balance || 0).toFixed(2)}</p>
             </div>
-            <img src={user?.avatar || ''} alt="" className="w-9 h-9 rounded-full bg-gray-700 border border-[#F6FF2E]/20" />
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user?.name || 'User avatar'} className="w-9 h-9 rounded-full bg-gray-700 border border-[#F6FF2E]/20" />
+            ) : (
+              <svg className="w-9 h-9 rounded-full bg-gray-700 border border-[#F6FF2E]/20 p-1.5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#F6FF2E" />
+              </svg>
+            )}
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">

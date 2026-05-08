@@ -79,13 +79,6 @@ const kycList = [
   { id: 3, user_id: 4, name: 'David Lee', email: 'david@test.com', id_type: 'national_id', id_number: 'NID456789123', id_front_image: '', id_back_image: '', selfie_image: '', status: 'verified', rejection_reason: null, submitted_at: '2026-04-10T08:00:00', reviewed_at: '2026-04-11T10:00:00', reviewed_by: 1 },
 ];
 
-const plans = [
-  { id: 1, name: 'Free Starter', description: 'Begin your earning journey', price: 0.00, daily_task_limit: 3, daily_earning_cap: 5.00, duration: 999, duration_unit: 'days', features: ['3 daily tasks', '$5 daily earning cap', 'Basic task types', 'Community support'], color: '#94A3B8', icon: 'Zap', status: 'active' },
-  { id: 2, name: 'Bronze', description: 'Unlock more earning potential', price: 25.00, daily_task_limit: 10, daily_earning_cap: 25.00, duration: 30, duration_unit: 'days', features: ['10 daily tasks', '$25 daily earning cap', 'All task types', 'Priority support', 'Referral bonuses'], color: '#CD7F32', icon: 'Award', status: 'active' },
-  { id: 3, name: 'Silver', description: 'Maximum earnings for serious users', price: 75.00, daily_task_limit: 25, daily_earning_cap: 75.00, duration: 30, duration_unit: 'days', features: ['25 daily tasks', '$75 daily earning cap', 'All task types + bonuses', 'VIP support', 'Higher referral rate', 'Instant withdrawals'], color: '#C0C0C0', icon: 'Crown', status: 'active' },
-  { id: 4, name: 'Gold', description: 'Elite tier with unlimited potential', price: 150.00, daily_task_limit: 50, daily_earning_cap: 200.00, duration: 30, duration_unit: 'days', features: ['50 daily tasks', '$200 daily earning cap', 'All premium tasks', 'Dedicated support', 'Maximum referral rate', 'Instant withdrawals', 'Exclusive bonuses'], color: '#FFD700', icon: 'Star', status: 'active' },
-];
-
 const paymentMethods = [
   { id: 1, name: 'Bank Transfer', type: 'deposit', currency: 'USD', min_amount: 10.00, max_amount: 10000.00, instructions: 'Transfer to the provided account number and upload proof', account_details: 'Account: 000123456789\nBank: NEXPockEt Bank', icon: 'Landmark', sort_order: 1, status: 'active' },
   { id: 2, name: 'PayPal', type: 'withdrawal', currency: 'USD', min_amount: 20.00, max_amount: 5000.00, instructions: 'Enter your PayPal email address', account_details: 'Send to user provided PayPal email', icon: 'Wallet', sort_order: 2, status: 'active' },
@@ -252,31 +245,6 @@ export async function mockRequest(endpoint: string, method: string, body?: any):
 
   if (endpoint.startsWith('transactions/reject/') && method === 'POST') {
     return { success: true, message: 'Transaction rejected' };
-  }
-
-  // ---- PLANS ----
-  if (endpoint === 'plans') {
-    return { success: true, plans };
-  }
-
-  if (endpoint === 'plans/admin') {
-    return { success: true, plans };
-  }
-
-  if (endpoint === 'plans/activate' && method === 'POST') {
-    return { success: true, message: 'Plan activated' };
-  }
-
-  if (endpoint === 'plans/create' && method === 'POST') {
-    return { success: true, message: 'Plan created' };
-  }
-
-  if (endpoint.startsWith('plans/update/') && method === 'PATCH') {
-    return { success: true, message: 'Plan updated' };
-  }
-
-  if (endpoint.startsWith('plans/delete/') && method === 'DELETE') {
-    return { success: true, message: 'Plan deleted' };
   }
 
   // ---- KYC ----

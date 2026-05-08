@@ -25,93 +25,154 @@ serve(async (req) => {
     )
 
     const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('Not logged in')
-
-    const { task_id } = await req.json()
-    if (!task_id) throw new Error('Task ID is required')
-
-    // 1. Get user's active plan
-    const { data: userPlan, error: planError } = await supabaseAdmin
-      .from('user_plans')
-      .select('id, plan_id, total_earned, plans(*)')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single()
-
-    if (planError || !userPlan) throw new Error('No active plan found. Please purchase a plan first.')
-    const plan = userPlan.plans;
-
-    // 2. Check daily task count
-    const startOfDay = new Date();
-    startOfDay.setUTCHours(0,0,0,0);
-    
-    const { count: tasksDoneToday } = await supabaseAdmin
-      .from('user_tasks')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('completed_at', startOfDay.toISOString())
-
-    if (tasksDoneToday >= plan.daily_tasks) {
-      throw new Error(`Daily limit reached. Your plan allows ${plan.daily_tasks} tasks per day.`)
+    if (!user) {
+      throw new Error('Not logged in')
     }
 
-    // 3. Check if THIS specific task was already done today
-    const { data: existingTask } = await supabaseAdmin
+    let task_id
+    try {
+      const body = await req.json()
+      task_id = body.task_id
+    } catch (e) {
+      throw new Error('Invalid request body: missing or malformed JSON')
+    }
+
+    if (!task_id) {
+      throw new Error('Task ID is required')
+    }
+
+    // 1. Check for active earning cycle
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('active_earning_cycle_id, balance, total_earned')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile) throw new Error('User not found')
+    if (!userProfile.active_earning_cycle_id) {
+      throw new Error('No active earning cycle. Please deposit and start an earning cycle first.')
+    }
+
+    // 2. Get active earning cycle details
+    const { data: cycle, error: cycleError } = await supabaseAdmin
+      .from('earning_cycles')
+      .select('*')
+      .eq('id', userProfile.active_earning_cycle_id)
+      .single()
+
+    if (cycleError || !cycle) throw new Error('Active earning cycle not found')
+    if (cycle.status !== 'active') throw new Error('Earning cycle is not active')
+
+    // ── LAZY COMPLETION ──────────────────────────────────────────────────────
+    // If the cycle's end_date has passed, complete it now rather than
+    // awarding more rewards beyond the 21-day window.
+    const cycleEndDate = cycle.end_date ? new Date(cycle.end_date) : null;
+    if (cycleEndDate && new Date() > cycleEndDate) {
+      // Mark cycle completed
+      await supabaseAdmin
+        .from('earning_cycles')
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', cycle.id);
+
+      // Clear active cycle from profile — this unblocks withdrawals
+      await supabaseAdmin
+        .from('profiles')
+        .update({ active_earning_cycle_id: null })
+        .eq('id', user.id);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          cycleCompleted: true,
+          message: 'Your 21-day earning cycle has completed! Your funds are now available for withdrawal.',
+          finalBalance: Number(cycle.current_balance),
+          totalEarned: Number(cycle.current_balance) - Number(cycle.initial_balance),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // 3. Check if task already completed TODAY in this cycle
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+
+    const { data: completedTaskToday } = await supabaseAdmin
       .from('user_tasks')
       .select('id')
       .eq('user_id', user.id)
-      .eq('task_id', task_id)
-      .gte('completed_at', startOfDay.toISOString())
-      .single()
+      .gte('completed_at', today.toISOString())
+      .limit(1)
 
-    if (existingTask) throw new Error('You have already completed this task today.')
+    // If already completed a task today, check if 5% was already applied
+    let alreadyEarnedToday = false
+    if (completedTaskToday && completedTaskToday.length > 0) {
+      if (cycle.last_task_completion_date) {
+        const lastCompleteDate = new Date(cycle.last_task_completion_date)
+        if (lastCompleteDate.toDateString() === today.toDateString()) {
+          alreadyEarnedToday = true
+        }
+      }
+    }
 
-    // 4. Calculate Dynamic Reward
-    // Reward = (Price * Daily ROI %) / Tasks Per Day
-    const dailyPotential = (Number(plan.price) * Number(plan.daily_roi_pct)) / 100;
-    const taskReward = dailyPotential / plan.daily_tasks;
+    const taskReward = alreadyEarnedToday ? 0 : (Number(cycle.current_balance) * 0.05)
+    const newCycleBalance = Number(cycle.current_balance) + taskReward
 
-    // 5. Record task completion
+    // 4. Record task completion
     const { error: insertError } = await supabaseAdmin
       .from('user_tasks')
       .insert({ user_id: user.id, task_id })
 
     if (insertError) throw new Error('Failed to record task completion')
 
-    // 6. Update Profile Balance & Plan Progress
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('balance, total_earned')
-      .eq('id', user.id)
-      .single()
+    // 5. Update Profile Balance if earning today
+    if (taskReward > 0) {
+      const newBalance = Number(userProfile.balance) + taskReward
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          balance: newBalance,
+          total_earned: Number(userProfile.total_earned) + taskReward
+        })
+        .eq('id', user.id)
 
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ 
-        balance: Number(profile.balance) + taskReward,
-        total_earned: Number(profile.total_earned) + taskReward 
-      })
-      .eq('id', user.id)
+      if (updateError) throw new Error('Failed to update balance')
 
-    if (updateError) throw new Error('Failed to update balance')
+      // 6. Update earning cycle balance and last completion date
+      const { error: cycleUpdateError } = await supabaseAdmin
+        .from('earning_cycles')
+        .update({
+          current_balance: newCycleBalance,
+          last_task_completion_date: today.toISOString().split('T')[0]
+        })
+        .eq('id', cycle.id)
 
-    await supabaseAdmin
-      .from('user_plans')
-      .update({ total_earned: Number(userPlan.total_earned) + taskReward })
-      .eq('id', userPlan.id)
+      if (cycleUpdateError) throw new Error('Failed to update earning cycle')
+    }
+
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Task completed successfully', 
-        reward: taskReward,
-        progress: `${tasksDoneToday + 1}/${plan.daily_tasks}`
+        message: alreadyEarnedToday 
+          ? 'Task completed! You already earned 5% today. Return tomorrow for another 5%.'
+          : 'Task completed successfully! You earned 5% of your wallet balance.',
+        rewardAmount: taskReward,
+        walletNewBalance: Number(userProfile.balance) + taskReward,
+        cycleBalance: newCycleBalance,
+        earnedToday: alreadyEarnedToday ? 'Yes' : 'No',
+        cycleId: userProfile.active_earning_cycle_id
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error: any) {
+    console.error('Error in complete-task function:', error.message, error.stack)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        message: error.message || 'Unknown error occurred',
+        error: error.message || 'Unknown error'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }

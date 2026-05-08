@@ -108,12 +108,9 @@ export default function AdminUsers() {
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-white/[0.02]">
                     <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <img src={u.avatar} alt="" className="w-8 h-8 rounded-full bg-gray-700" />
-                        <div>
-                          <p className="text-sm font-medium text-white">{u.name}</p>
-                          <p className="text-xs text-gray-500">{u.email}</p>
-                        </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.email}</p>
                       </div>
                     </td>
                     <td className="p-3 text-sm text-gray-400">{u.plan_name || 'Free'}</td>

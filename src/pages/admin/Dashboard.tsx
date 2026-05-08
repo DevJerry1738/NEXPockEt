@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminApi } from '@/api/api';
 import { toast } from 'sonner';
 import {
-  Users, DollarSign, Clock, ShieldCheck, ListChecks, TrendingUp, Gift, BarChart3
+  Users, DollarSign, Clock, ShieldCheck, ListChecks, TrendingUp, BarChart3
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
     { label: 'Pending Withdrawals', value: stats.pending_withdrawals || 0, icon: Clock, color: 'text-red-400', bg: 'bg-red-400/10' },
     { label: 'Pending KYC', value: stats.pending_kyc || 0, icon: ShieldCheck, color: 'text-purple-400', bg: 'bg-purple-400/10' },
     { label: 'Active Tasks', value: stats.active_tasks || 0, icon: ListChecks, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
-    { label: 'Bonus Tasks', value: stats.active_bonus_tasks || 0, icon: Gift, color: 'text-pink-400', bg: 'bg-pink-400/10' },
+    // { label: 'Bonus Tasks', value: stats.active_bonus_tasks || 0, icon: Gift, color: 'text-pink-400', bg: 'bg-pink-400/10' },
   ];
 
   return (
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
             { label: 'Manage Users', desc: 'View & edit users', href: '/admin/users' },
             { label: 'Review KYC', desc: `${stats.pending_kyc || 0} pending`, href: '/admin/kyc' },
             { label: 'Transactions', desc: 'Review deposits & withdrawals', href: '/admin/transactions' },
-            { label: 'Settings', desc: 'Configure platform', href: '/admin/settings' },
+            // { label: 'Settings', desc: 'Configure platform', href: '/admin/settings' },
           ].map((a) => (
             <a key={a.label} href={a.href} className="bg-[#0A0C10] rounded-lg p-4 border border-white/5 hover:border-[#F6FF2E]/30 transition-all">
               <p className="text-sm font-medium text-white">{a.label}</p>

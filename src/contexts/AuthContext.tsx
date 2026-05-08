@@ -15,6 +15,7 @@ interface User {
   status?: string;
   total_earned?: number;
   total_withdrawn?: number;
+  created_at?: string;
 }
 
 interface AuthContextType {
@@ -135,10 +136,38 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (formData: any) => {
     setLoading(true);
+    
+    // Resolve referral code to referrer ID if provided
+    let referred_by_id = null;
+    if (formData.referral_code) {
+      // Use RPC function instead of direct query - bypasses RLS since function is SECURITY DEFINER
+      const { data: referrerId, error: refError } = await supabase
+        .rpc('validate_referral_code', {
+          p_referral_code: formData.referral_code.toUpperCase()
+        });
+      
+      if (refError) {
+        setLoading(false);
+        throw new Error(`Failed to validate referral code: ${refError.message}`);
+      }
+      
+      if (!referrerId) {
+        setLoading(false);
+        throw new Error(`Referral code "${formData.referral_code}" not found`);
+      }
+      
+      referred_by_id = referrerId;
+    }
+    
     const { data, error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
-      options: { data: { name: formData.name } },
+      options: { 
+        data: { 
+          name: formData.name,
+          referred_by: referred_by_id
+        },
+      },
     });
     if (error) {
       setLoading(false);
@@ -152,15 +181,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     setUser(null);
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-      window.location.href = '/login';
-    }
+    // Sign out from Supabase — onAuthStateChange will fire with session=null,
+    // which sets user to null and lets React Router's guards redirect to /login.
+    // Do NOT use window.location.href here: it resolves against the current
+    // hostname and would redirect to the production URL in a hosted environment.
+    await supabase.auth.signOut().catch(console.error);
   };
 
   return (

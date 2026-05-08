@@ -73,6 +73,9 @@ export default function Login() {
         <p className="text-center text-gray-400 mt-6 text-sm">
           Don't have an account? <Link to="/register" className="text-[#F6FF2E] hover:underline">Create one</Link>
         </p>
+        <p className="text-center text-gray-400 mt-2 text-xs">
+          <a href="https://thenexpocket.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#F6FF2E]">Back to Homepage</a>
+        </p>
       </div>
     </div>
   );

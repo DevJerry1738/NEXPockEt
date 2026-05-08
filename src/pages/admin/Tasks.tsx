@@ -11,7 +11,7 @@ export default function AdminTasks() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ title: '', description: '', type: 'click', reward: '', url: '', duration: '30', max_completions: '1000' });
+  const [form, setForm] = useState({ title: '', description: '', type: 'click', reward: '0', url: '', duration: '30', max_completions: '1000', min_tier: '1' });
 
   const fetchTasks = async () => {
     try {
@@ -24,9 +24,9 @@ export default function AdminTasks() {
   useEffect(() => { fetchTasks(); }, []);
 
   const handleSubmit = async () => {
-    if (!form.title || !form.reward) { toast.error('Title and reward required'); return; }
+    if (!form.title) { toast.error('Title required'); return; }
     try {
-      const data = { ...form, reward: parseFloat(form.reward), duration: parseInt(form.duration), max_completions: parseInt(form.max_completions) };
+      const data = { ...form, reward: parseFloat(form.reward) || 0, duration: parseInt(form.duration), max_completions: parseInt(form.max_completions), min_tier: parseInt(form.min_tier) };
       if (editing) {
         await taskApi.update(editing.id, data);
         toast.success('Task updated');
@@ -35,7 +35,7 @@ export default function AdminTasks() {
         toast.success('Task created');
       }
       setDialogOpen(false); setEditing(null);
-      setForm({ title: '', description: '', type: 'click', reward: '', url: '', duration: '30', max_completions: '1000' });
+      setForm({ title: '', description: '', type: 'click', reward: '0', url: '', duration: '30', max_completions: '1000', min_tier: '1' });
       fetchTasks();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -49,9 +49,10 @@ export default function AdminTasks() {
   const openEdit = (task: any) => {
     setEditing(task);
     setForm({
-      title: task.title, description: task.description || '', type: task.type,
-      reward: task.reward.toString(), url: task.url || '', duration: task.duration.toString(),
-      max_completions: task.max_completions.toString(),
+      title: task.title, description: task.description || '', type: task.platform || 'click',
+      reward: (task.reward || 0).toString(), url: task.url || '', duration: (task.duration || 30).toString(),
+      max_completions: (task.max_completions || 1000).toString(),
+      min_tier: (task.min_tier || 1).toString(),
     });
     setDialogOpen(true);
   };
@@ -62,7 +63,7 @@ export default function AdminTasks() {
         <h1 className="text-2xl font-bold text-white flex items-center gap-2"><ListChecks className="w-6 h-6" /> Tasks</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); setForm({ title: '', description: '', type: 'click', reward: '', url: '', duration: '30', max_completions: '1000' }); }}
+            <Button onClick={() => { setEditing(null); setForm({ title: '', description: '', type: 'click', reward: '0', url: '', duration: '30', max_completions: '1000', min_tier: '1' }); }}
               className="bg-[#F6FF2E] text-[#0A0C10] hover:bg-[#e5ef2a]">
               <Plus className="w-4 h-4 mr-1" /> Add Task
             </Button>
@@ -77,14 +78,16 @@ export default function AdminTasks() {
                   <option value="click">Click</option><option value="survey">Survey</option><option value="signup">Signup</option>
                   <option value="social">Social</option><option value="video">Video</option><option value="app">App</option>
                 </select>
-                <Input type="number" value={form.reward} onChange={(e) => setForm({ ...form, reward: e.target.value })} placeholder="Reward ($)" className="bg-[#0A0C10] border-white/10 text-white" />
+                <div className="flex items-center gap-2 bg-[#0A0C10] border border-white/10 rounded-md px-3 text-sm">
+                  <span className="text-gray-400">Min Tier:</span>
+                  <select value={form.min_tier} onChange={(e) => setForm({ ...form, min_tier: e.target.value })} className="bg-transparent text-white outline-none w-full">
+                    <option value="1">1 (Starter)</option><option value="2">2 (Basic)</option>
+                    <option value="3">3 (Premium)</option><option value="4">4 (Elite)</option>
+                  </select>
+                </div>
               </div>
               <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="URL (optional)" className="bg-[#0A0C10] border-white/10 text-white" />
-              <div className="grid grid-cols-2 gap-3">
-                <Input type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Duration (sec)" className="bg-[#0A0C10] border-white/10 text-white" />
-                <Input type="number" value={form.max_completions} onChange={(e) => setForm({ ...form, max_completions: e.target.value })} placeholder="Max completions" className="bg-[#0A0C10] border-white/10 text-white" />
-              </div>
-              <Button onClick={handleSubmit} className="w-full bg-[#F6FF2E] text-[#0A0C10]">{editing ? 'Update' : 'Create'}</Button>
+              <Button onClick={handleSubmit} className="w-full bg-[#F6FF2E] text-[#0A0C10] mt-2">{editing ? 'Update' : 'Create'}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -96,9 +99,8 @@ export default function AdminTasks() {
             <table className="w-full">
               <thead><tr className="border-b border-white/5">
                 <th className="text-left p-3 text-xs font-medium text-gray-400">Title</th>
-                <th className="text-left p-3 text-xs font-medium text-gray-400">Type</th>
-                <th className="text-left p-3 text-xs font-medium text-gray-400">Reward</th>
-                <th className="text-left p-3 text-xs font-medium text-gray-400">Done</th>
+                <th className="text-left p-3 text-xs font-medium text-gray-400">Platform/Type</th>
+                <th className="text-left p-3 text-xs font-medium text-gray-400">Min Tier</th>
                 <th className="text-left p-3 text-xs font-medium text-gray-400">Status</th>
                 <th className="text-left p-3 text-xs font-medium text-gray-400">Actions</th>
               </tr></thead>
@@ -106,9 +108,8 @@ export default function AdminTasks() {
                 {tasks.map((t) => (
                   <tr key={t.id} className="hover:bg-white/[0.02]">
                     <td className="p-3 text-sm text-white">{t.title}</td>
-                    <td className="p-3 text-xs text-gray-400 capitalize">{t.type}</td>
-                    <td className="p-3 text-sm font-medium text-[#F6FF2E]">${parseFloat(t.reward).toFixed(2)}</td>
-                    <td className="p-3 text-xs text-gray-400">{t.completions}/{t.max_completions}</td>
+                    <td className="p-3 text-xs text-gray-400 capitalize">{t.platform || t.type}</td>
+                    <td className="p-3 text-sm font-medium text-[#F6FF2E]">Tier {t.min_tier || 1}</td>
                     <td className="p-3"><span className={`text-xs capitalize ${t.status === 'active' ? 'text-green-400' : 'text-gray-400'}`}>{t.status}</span></td>
                     <td className="p-3">
                       <div className="flex items-center gap-1">

@@ -2,9 +2,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import {
-  LayoutDashboard, Users, ListChecks, Gift, ArrowLeftRight,
-  ShieldCheck, CreditCard, Settings, ScrollText, Bell,
-  LogOut, ChevronLeft, ChevronRight, Menu, Zap, BarChart3
+  LayoutDashboard, Users, ListChecks, ArrowLeftRight,
+  ShieldCheck, CreditCard, Bell, LogOut, ChevronLeft, ChevronRight, Menu, Zap, Gift
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -12,14 +11,14 @@ const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/tasks', icon: ListChecks, label: 'Tasks' },
-  { to: '/admin/bonus-tasks', icon: Gift, label: 'Bonus Tasks' },
+  // { to: '/admin/bonus-tasks', icon: Gift, label: 'Bonus Tasks' },
   { to: '/admin/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { to: '/admin/kyc', icon: ShieldCheck, label: 'KYC Verification' },
-  { to: '/admin/plans', icon: BarChart3, label: 'Plans' },
+  { to: '/admin/referral-bonus-tiers', icon: Gift, label: 'Referral Bonus Tiers' },
   { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
-  { to: '/admin/settings', icon: Settings, label: 'Settings' },
-  { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit Logs' },
+  // { to: '/admin/settings', icon: Settings, label: 'Settings' },
+  // { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit Logs' },
 ];
 
 export default function AdminLayout() {

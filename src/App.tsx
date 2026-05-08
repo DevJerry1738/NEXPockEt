@@ -14,8 +14,6 @@ import UserKyc from '@/pages/user/Kyc';
 import UserReferrals from '@/pages/user/Referrals';
 import UserNotifications from '@/pages/user/Notifications';
 import UserProfile from '@/pages/user/Profile';
-import UserPlans from '@/pages/user/Plans';
-
 
 import AdminDashboard from '@/pages/admin/Dashboard';
 import AdminUsers from '@/pages/admin/Users';
@@ -23,7 +21,7 @@ import AdminTasks from '@/pages/admin/Tasks';
 import AdminBonusTasks from '@/pages/admin/BonusTasks';
 import AdminTransactions from '@/pages/admin/Transactions';
 import AdminKyc from '@/pages/admin/Kyc';
-import AdminPlans from '@/pages/admin/Plans';
+import AdminReferralBonusTiers from '@/pages/admin/ReferralBonusTiers';
 import AdminPayments from '@/pages/admin/Payments';
 import AdminSettings from '@/pages/admin/Settings';
 import AdminAuditLogs from '@/pages/admin/AuditLogs';
@@ -52,8 +50,6 @@ function AppRoutes() {
         <Route path="/referrals" element={<UserReferrals />} />
         <Route path="/notifications" element={<UserNotifications />} />
         <Route path="/profile" element={<UserProfile />} />
-        <Route path="/plans" element={<UserPlans />} />
-
       </Route>
 
       <Route element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -63,14 +59,14 @@ function AppRoutes() {
         <Route path="/admin/bonus-tasks" element={<AdminBonusTasks />} />
         <Route path="/admin/transactions" element={<AdminTransactions />} />
         <Route path="/admin/kyc" element={<AdminKyc />} />
-        <Route path="/admin/plans" element={<AdminPlans />} />
+        <Route path="/admin/referral-bonus-tiers" element={<AdminReferralBonusTiers />} />
         <Route path="/admin/payments" element={<AdminPayments />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
         <Route path="/admin/notifications" element={<AdminNotifications />} />
       </Route>
 
-      <Route path="*" element={<Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />} />
+      <Route path="*" element={<Navigate to={!user ? '/login' : user.role === 'admin' ? '/admin' : '/dashboard'} replace />} />
     </Routes>
   );
 }
